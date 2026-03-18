@@ -28,9 +28,11 @@ pip install -r requirements.txt
 2. Stream a small sample of IMDb Movie Reviews into Kafka:
 
    ```bash
-   python -m src.ingestion.producer --mode batch --limit 100
+   python -m src.ingestion.producer --mode batch --limit 100 --split train
    ```
-
+  ```bash
+   python -m src.ingestion.producer --mode batch --limit 100 --split test
+   ```
    This downloads the IMDb dataset via the `datasets` library and sends reviews to the `imdb-reviews` topic.
 
 3. In another terminal, run the bronze consumer to land the data in the bronze layer (MinIO/S3):
@@ -48,6 +50,16 @@ pip install -r requirements.txt
    ```
 
    This reads JSONL from `bronze/imdb/`, applies text cleaning, deduplication, and writes to `silver/imdb/`.
+
+   To keep **train** and **test** flows separate, you can also run the silver job twice with different prefixes:
+
+   ```bash
+   # Clean train split
+   python -m src.transformation.silver_job --bronze-prefix bronze/imdb/train/ --silver-prefix silver/imdb/train/
+
+   # Clean test split
+   python -m src.transformation.silver_job --bronze-prefix bronze/imdb/test/  --silver-prefix silver/imdb/test/
+   ```
 
 5. Run the embedding job to produce gold Parquet (BERT-encoded):
 

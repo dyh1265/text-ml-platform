@@ -122,6 +122,8 @@ def run_embedding_job(
     batch_size: int = DEFAULT_BATCH_SIZE,
     device: Optional[str] = None,
     iceberg: bool = False,
+    iceberg_namespace: str = "imdb",
+    iceberg_table: str = "gold",
 ) -> int:
     """Read silver JSONL, encode with BERT, write gold Parquet or Iceberg.
 
@@ -172,7 +174,7 @@ def run_embedding_job(
     )
 
     if iceberg:
-        _write_gold_iceberg(table)
+        _write_gold_iceberg(table, namespace=iceberg_namespace, table_name=iceberg_table)
     else:
         _write_gold_parquet(table, gold_prefix)
     return len(records)
@@ -217,6 +219,18 @@ def parse_args(argv: Optional[list[str]] = None) -> argparse.Namespace:
         action="store_true",
         help="Write to Iceberg table instead of Parquet.",
     )
+    parser.add_argument(
+        "--iceberg-namespace",
+        type=str,
+        default="imdb",
+        help="Iceberg namespace to use when --iceberg is set (default: 'imdb').",
+    )
+    parser.add_argument(
+        "--iceberg-table",
+        type=str,
+        default="gold",
+        help="Iceberg table name to use when --iceberg is set (default: 'gold').",
+    )
     return parser.parse_args(argv)
 
 
@@ -229,5 +243,7 @@ def main(argv: Optional[list[str]] = None) -> None:
         batch_size=args.batch_size,
         device=args.device,
         iceberg=args.iceberg,
+        iceberg_namespace=args.iceberg_namespace,
+        iceberg_table=args.iceberg_table,
     )
     print(f"Embedding job complete. Wrote {total} records.")
