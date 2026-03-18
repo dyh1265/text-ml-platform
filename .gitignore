@@ -1,0 +1,35 @@
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+.Python
+env/
+venv/
+.venv/
+.idea/
+.vscode/
+.mypy_cache/
+.pytest_cache/
+.ruff_cache/
+
+# Jupyter
+.ipynb_checkpoints/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Local data and artifacts
+data/
+logs/
+models/
+
+# MinIO / Iceberg local state
+docker/minio-data/
+iceberg_catalog/catalog.db
+
+# Python packaging
+dist/
+build/
+*.egg-info/
+

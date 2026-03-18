@@ -1,1 +1,17 @@
-# Add project dependencies here
+# Core streaming and data dependencies
+kafka-python
+datasets
+boto3
+pytest
+
+# Embedding (BERT) and gold layer
+transformers
+torch
+pyarrow
+
+# Iceberg (gold layer)
+pyiceberg sqlalchemy s3fs
+
+# Visualization (PCA export)
+scikit-learn
+matplotlib
