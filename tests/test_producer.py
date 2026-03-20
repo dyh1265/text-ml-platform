@@ -13,17 +13,17 @@ def test_load_imdb_reviews():
     ]
 
     class MockDs:
-            def __init__(self, data):
-                self._data = data
+        def __init__(self, data):
+            self._data = data
 
-            def shuffle(self, seed=None):
-                return self
+        def shuffle(self, seed=None):
+            return self
 
-            def __iter__(self):
-                return iter(self._data)
+        def __iter__(self):
+            return iter(self._data)
 
-            def __len__(self):
-                return len(self._data)
+        def __len__(self):
+            return len(self._data)
 
     with patch("src.ingestion.producer.load_dataset", return_value=MockDs(mock_rows)):
         reviews = list(load_imdb_reviews(split="train", limit=2, shuffle=False))

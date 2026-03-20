@@ -1,4 +1,4 @@
-﻿"""Tests for train_classifier."""
+"""Tests for train_classifier."""
 
 from pathlib import Path
 from unittest.mock import MagicMock, patch
@@ -27,11 +27,13 @@ def test_apply_split_filter_filters():
 
 
 def test_train_and_save():
-    mock_df = pd.DataFrame({
-        "embedding": [[0.1]*768, [0.2]*768, [0.9]*768, [0.8]*768],
-        "label": [0, 0, 1, 1],
-        "split": ["train", "train", "train", "train"],
-    })
+    mock_df = pd.DataFrame(
+        {
+            "embedding": [[0.1] * 768, [0.2] * 768, [0.9] * 768, [0.8] * 768],
+            "label": [0, 0, 1, 1],
+            "split": ["train", "train", "train", "train"],
+        }
+    )
     mock_scan = MagicMock()
     mock_scan.to_pandas.return_value = mock_df
     mock_table = MagicMock()
@@ -39,8 +41,10 @@ def test_train_and_save():
     mock_catalog = MagicMock()
     mock_catalog.load_table.return_value = mock_table
 
-    with (patch("src.training.train_classifier.get_iceberg_catalog", return_value=mock_catalog),
-          patch("src.training.train_classifier.joblib.dump")):
+    with (
+        patch("src.training.train_classifier.get_iceberg_catalog", return_value=mock_catalog),
+        patch("src.training.train_classifier.joblib.dump"),
+    ):
         out_path = Path("models/test_sentiment.joblib")
         out_path.parent.mkdir(parents=True, exist_ok=True)
         train_and_save(
