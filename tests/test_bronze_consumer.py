@@ -1,16 +1,12 @@
 """Tests for bronze_consumer."""
 
-from unittest.mock import MagicMock, patch
+from unittest.mock import patch
 
-import pytest
-
-from src.utils.schema import ImdbBronzeReview
+from src.ingestion.bronze_consumer import _flush_batch
 
 
 def test_flush_batch():
     """_flush_batch uploads JSONL to S3."""
-    from src.ingestion.bronze_consumer import _flush_batch
-
     lines = ['{"id":"1","text":"hi","label":1,"split":"train"}']
     with (
         patch("src.ingestion.bronze_consumer.ensure_bucket_exists"),
