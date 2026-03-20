@@ -1,0 +1,16 @@
+# GPU build: PyTorch with CUDA for BERT inference and embeddings.
+# Requires: NVIDIA Container Toolkit (nvidia-docker2) on the host.
+FROM nvcr.io/nvidia/pytorch:26.02-py3
+
+WORKDIR /app
+
+ENV PYTHONPATH=/app
+
+# Base image has torch with CUDA; install the rest (no torch to avoid overwriting with CPU build).
+COPY requirements-gpu.txt /app/requirements-gpu.txt
+RUN pip install --no-cache-dir -r /app/requirements-gpu.txt
+
+# Copy the project code.
+COPY . /app
+
+CMD ["python", "-c", "import torch; print('CUDA available:', torch.cuda.is_available())"]

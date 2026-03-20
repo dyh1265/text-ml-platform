@@ -17,21 +17,20 @@ if __name__ == "__main__":
         sys.path.insert(0, str(_root))
 
 import argparse
-import json
 import time
-from typing import Iterable, Optional
+from collections.abc import Iterable
 
 from datasets import load_dataset
-from kafka import KafkaProducer
-from kafka.errors import NoBrokersAvailable
 
 from src import config
+from src.utils.kafka_client import create_producer
 from src.utils.schema import ImdbBronzeReview
+from src.utils.structured_logging import log_event
 
 
 def load_imdb_reviews(
-    split: Optional[str] = None,
-    limit: Optional[int] = None,
+    split: str | None = None,
+    limit: int | None = None,
     shuffle: bool = True,
     seed: int = 42,
 ) -> Iterable[ImdbBronzeReview]:
@@ -61,34 +60,14 @@ def load_imdb_reviews(
     for idx, row in enumerate(ds):
         if idx >= max_records:
             break
-        yield ImdbBronzeReview.from_raw_imdb(row, idx)
-
-
-def create_producer() -> KafkaProducer:
-    """Create a KafkaProducer configured from :mod:`src.config`."""
-    last_error: Exception | None = None
-
-    for attempt in range(10):
-        try:
-            return KafkaProducer(
-                bootstrap_servers=config.KAFKA_BOOTSTRAP_SERVERS,
-                value_serializer=lambda v: json.dumps(v).encode("utf-8"),
-            )
-        except NoBrokersAvailable as exc:
-            last_error = exc
-            print("Kafka broker not ready yet, retrying...")
-            time.sleep(2)
-
-    raise RuntimeError(
-        f"Kafka broker not reachable at {config.KAFKA_BOOTSTRAP_SERVERS}"
-    ) from last_error
+        yield ImdbBronzeReview.from_raw_imdb(row, idx, split=split)
 
 
 def stream_imdb_reviews(
     mode: str = "batch",
     sleep_seconds: float = 1.0,
-    split: Optional[str] = None,
-    limit: Optional[int] = None,
+    split: str | None = None,
+    limit: int | None = None,
     shuffle: bool = True,
     seed: int = 42,
 ) -> None:
@@ -110,10 +89,7 @@ def stream_imdb_reviews(
     producer = create_producer()
     topic = config.KAFKA_IMDB_TOPIC
 
-    print(
-        f"Streaming IMDb reviews to topic '{topic}' "
-        f"on {config.KAFKA_BOOTSTRAP_SERVERS} in {mode} mode..."
-    )
+    log_event("producer_started", topic=topic, servers=config.KAFKA_BOOTSTRAP_SERVERS, mode=mode)
 
     count = 0
     for review in load_imdb_reviews(split=split, limit=limit, shuffle=shuffle, seed=seed):
@@ -125,19 +101,16 @@ def stream_imdb_reviews(
 
     producer.flush()
     producer.close()
-    print(f"Finished streaming {count} reviews to topic '{topic}'.")
+    log_event("producer_finished", topic=topic, count=count)
 
 
-def parse_args(argv: Optional[list[str]] = None) -> argparse.Namespace:
-    parser = argparse.ArgumentParser(
-        description="Stream IMDb Movie Reviews into Kafka."
-    )
+def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
+    parser = argparse.ArgumentParser(description="Stream IMDb Movie Reviews into Kafka.")
     parser.add_argument(
         "--mode",
         choices=["batch", "realtime"],
         default="realtime",
-        help="Streaming mode: 'batch' sends as fast as possible; "
-        "'realtime' sleeps between messages.",
+        help="Streaming mode: 'batch' sends as fast as possible; 'realtime' sleeps between messages.",
     )
     parser.add_argument(
         "--sleep-seconds",
@@ -149,8 +122,7 @@ def parse_args(argv: Optional[list[str]] = None) -> argparse.Namespace:
         "--split",
         type=str,
         default=None,
-        help="IMDb dataset split to use (e.g. 'train', 'test'). "
-        "Defaults to IMDB_DEFAULT_SPLIT from config.",
+        help="IMDb dataset split to use (e.g. 'train', 'test'). Defaults to IMDB_DEFAULT_SPLIT from config.",
     )
     parser.add_argument(
         "--limit",
@@ -172,7 +144,7 @@ def parse_args(argv: Optional[list[str]] = None) -> argparse.Namespace:
     return parser.parse_args(argv)
 
 
-def main(argv: Optional[list[str]] = None) -> None:
+def main(argv: list[str] | None = None) -> None:
     args = parse_args(argv)
     stream_imdb_reviews(
         mode=args.mode,

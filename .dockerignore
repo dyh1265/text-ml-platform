@@ -1,0 +1,33 @@
+# Git and IDE
+.git
+.gitignore
+.cursor
+.vscode
+*.md
+!README.md
+
+# Python
+__pycache__
+*.py[cod]
+*.egg-info
+.eggs
+.pytest_cache
+.mypy_cache
+venv
+.venv
+env
+
+# Data and runtime (mounted or generated in container)
+minio-data
+docker/minio-data
+iceberg_catalog
+models
+*.joblib
+
+# Jupyter
+.ipynb_checkpoints
+*.ipynb
+
+# Tests and docs (optional: include if you run tests in image)
+# tests
+# docs

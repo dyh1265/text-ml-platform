@@ -1,0 +1,166 @@
+# App services for the text-ml-platform demo.
+# Run with infra first: docker compose -f docker-compose.yml -f docker-compose.demo.yml up -d
+# Requires: Dockerfile at project root; train the classifier first so models/sentiment_logreg.joblib exists (or mount ./models).
+
+services:
+  prepopulate_imdb:
+    build:
+      context: ..
+      dockerfile: Dockerfile
+    image: text-ml-platform:latest
+    command:
+      - bash
+      - -lc
+      - >
+        unset AWS_ACCESS_KEY_ID AWS_SECRET_ACCESS_KEY AWS_SESSION_TOKEN &&
+        python scripts/check_prepopulated.py && { echo "Already prepopulated."; exit 0; };
+        python -m src.ingestion.producer --mode batch --split train --limit 1000 &&
+        python -m src.ingestion.producer --mode batch --split test  --limit 1000 &&
+        python -m src.ingestion.bronze_consumer --batch-size 50 --limit 2000 &&
+        python -m src.transformation.silver_job --bronze-prefix bronze/imdb/train/ --silver-prefix silver/imdb/train/ &&
+        python -m src.transformation.silver_job --bronze-prefix bronze/imdb/test/  --silver-prefix silver/imdb/test/ &&
+        python -m src.training.finetune_bert --silver-train-prefix silver/imdb/train/ --silver-test-prefix silver/imdb/test/ --output-dir models/bert_sentiment_imdb &&
+        python -m src.features.embedding_job --silver-prefix silver/imdb/train/ --iceberg --iceberg-namespace imdb --iceberg-table gold_train --bert-path models/bert_sentiment_imdb &&
+        python -m src.features.embedding_job --silver-prefix silver/imdb/test/  --iceberg --iceberg-namespace imdb --iceberg-table gold_test --bert-path models/bert_sentiment_imdb &&
+        python -m src.training.train_classifier
+        --iceberg-identifier imdb.gold_train
+        --test-iceberg-identifier imdb.gold_test
+        --train-split train
+        --test-split test
+        --model-out models/sentiment_logreg.joblib
+    networks:
+      - app-tier
+    environment:
+      KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+      S3_ENDPOINT_URL: http://minio:9000
+      S3_ACCESS_KEY: admin
+      S3_SECRET_KEY: password123
+      S3_DATA_BUCKET: text-ml-data
+      ICEBERG_CATALOG_DB: /app/iceberg_catalog/catalog.db
+    volumes:
+      - ../models:/app/models
+      - ../iceberg_catalog:/app/iceberg_catalog
+    depends_on:
+      - kafka
+      - minio
+      - spark
+
+  bronze_consumer:
+    build:
+      context: ..
+      dockerfile: Dockerfile
+    image: text-ml-platform:latest
+    command:
+      - bash
+      - -lc
+      - >
+        unset AWS_ACCESS_KEY_ID AWS_SECRET_ACCESS_KEY AWS_SESSION_TOKEN &&
+        python -m src.ingestion.bronze_consumer --batch-size 50 --split train
+    networks:
+      - app-tier
+    environment:
+      KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+      S3_ENDPOINT_URL: http://minio:9000
+      S3_ACCESS_KEY: admin
+      S3_SECRET_KEY: password123
+      S3_DATA_BUCKET: text-ml-data
+    depends_on:
+      - kafka
+      - minio
+    restart: unless-stopped
+
+  predict_service:
+    build:
+      context: ..
+      dockerfile: Dockerfile
+    image: text-ml-platform:latest
+    command:
+      - bash
+      - -lc
+      - >
+        unset AWS_ACCESS_KEY_ID AWS_SECRET_ACCESS_KEY AWS_SESSION_TOKEN &&
+        python -m src.inference.predict_service
+        --finetuned-bert-path models/bert_sentiment_imdb
+        --model-path models/sentiment_logreg.joblib
+        --port 8000
+        --iceberg-write
+    networks:
+      - app-tier
+    ports:
+      - "8000:8000"
+    environment:
+      KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+      S3_ENDPOINT_URL: http://minio:9000
+      S3_ACCESS_KEY: admin
+      S3_SECRET_KEY: password123
+      S3_DATA_BUCKET: text-ml-data
+      ICEBERG_CATALOG_DB: /app/iceberg_catalog/catalog.db
+    volumes:
+      - ../models:/app/models
+      - ../iceberg_catalog:/app/iceberg_catalog
+    depends_on:
+      - minio
+    restart: unless-stopped
+
+  inference_worker:
+    image: text-ml-platform:latest
+    command:
+      - bash
+      - -lc
+      - >
+        unset AWS_ACCESS_KEY_ID AWS_SECRET_ACCESS_KEY AWS_SESSION_TOKEN &&
+        python -m src.inference.inference_worker
+        --classifier-model models/sentiment_logreg.joblib
+        --iceberg
+        --iceberg-namespace imdb
+        --iceberg-table gold_inference
+    networks:
+      - app-tier
+    environment:
+      KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+      KAFKA_INFERENCE_TOPIC: imdb-inference
+      S3_ENDPOINT_URL: http://minio:9000
+      S3_ACCESS_KEY: admin
+      S3_SECRET_KEY: password123
+      S3_DATA_BUCKET: text-ml-data
+      ICEBERG_CATALOG_DB: /app/iceberg_catalog/catalog.db
+    volumes:
+      - ../models:/app/models
+      - ../iceberg_catalog:/app/iceberg_catalog
+    depends_on:
+      - kafka
+      - minio
+    restart: unless-stopped
+
+  streamlit:
+    image: text-ml-platform:latest
+    command:
+      - bash
+      - -lc
+      - >
+        unset AWS_ACCESS_KEY_ID AWS_SECRET_ACCESS_KEY AWS_SESSION_TOKEN &&
+        streamlit run src/ui/streamlit_app.py --server.port=8501 --server.address=0.0.0.0
+    networks:
+      - app-tier
+    ports:
+      - "8501:8501"
+    environment:
+      KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+      KAFKA_INFERENCE_TOPIC: imdb-inference
+      S3_ENDPOINT_URL: http://minio:9000
+      S3_ACCESS_KEY: admin
+      S3_SECRET_KEY: password123
+      S3_DATA_BUCKET: text-ml-data
+      # Streamlit (server) calls predict API inside the Docker network.
+      PREDICT_API_URL: http://predict_service:8000/predict
+      GOLD_ICEBERG_IDENTIFIER: imdb.gold_train
+      # Inside container, localhost points to itself; use host gateway for local Ollama.
+      OLLAMA_API_BASE: http://host.docker.internal:11434/v1
+      ICEBERG_CATALOG_DB: /app/iceberg_catalog/catalog.db
+    volumes:
+      - ../iceberg_catalog:/app/iceberg_catalog
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    depends_on:
+      - predict_service
+    restart: unless-stopped

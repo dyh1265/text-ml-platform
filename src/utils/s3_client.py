@@ -2,7 +2,9 @@
 
 from __future__ import annotations
 
+import functools
 import time
+
 import boto3
 from botocore.client import Config
 from botocore.exceptions import ClientError
@@ -13,8 +15,12 @@ _UPLOAD_RETRIES = 3
 _UPLOAD_RETRY_DELAY = 2.0
 
 
+@functools.lru_cache(maxsize=1)
 def get_s3_client():
-    """Return a configured boto3 S3 client for MinIO or AWS S3."""
+    """Return a configured boto3 S3 client for MinIO or AWS S3.
+
+    The client is cached so all callers share a single connection pool.
+    """
     session = boto3.session.Session()
     return session.client(
         "s3",
@@ -73,9 +79,9 @@ def get_object_body(key: str, bucket: str | None = None) -> bytes:
 
 
 __all__ = [
-    "get_s3_client",
     "ensure_bucket_exists",
-    "upload_bytes",
-    "list_objects",
     "get_object_body",
+    "get_s3_client",
+    "list_objects",
+    "upload_bytes",
 ]

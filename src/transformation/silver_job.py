@@ -16,21 +16,19 @@ if __name__ == "__main__":
 
 import argparse
 import json
-import sys
 import time
-from pathlib import Path
-from typing import Optional
 from uuid import uuid4
 
 from src import config
 from src.transformation.cleaning import clean_text
 from src.utils.s3_client import ensure_bucket_exists, get_object_body, list_objects, upload_bytes
 from src.utils.schema import ImdbSilverReview
+from src.utils.structured_logging import log_event
 
 
 def deduplicate_by_text_label(
     records: list[ImdbSilverReview],
-    seen: set[tuple[str, int]] | None = None,
+    seen: set[tuple[str, int, str]] | None = None,
 ) -> list[ImdbSilverReview]:
     """Keep first occurrence of each (text, label) pair.
 
@@ -40,7 +38,7 @@ def deduplicate_by_text_label(
         seen = set()
     result: list[ImdbSilverReview] = []
     for r in records:
-        key = (r.text, r.label)
+        key = (r.text, int(r.label), r.split)
         if key in seen:
             continue
         seen.add(key)
@@ -49,8 +47,8 @@ def deduplicate_by_text_label(
 
 
 def run_silver_job(
-    bronze_prefix: Optional[str] = None,
-    silver_prefix: Optional[str] = None,
+    bronze_prefix: str | None = None,
+    silver_prefix: str | None = None,
     dedup: bool = True,
 ) -> int:
     """Read bronze JSONL files, clean text, deduplicate, write to silver.
@@ -69,10 +67,10 @@ def run_silver_job(
 
     objects = list_objects(bronze_prefix)
     if not objects:
-        print(f"No bronze objects found under {bronze_prefix}")
+        log_event("silver_job_no_bronze", level="warning", prefix=bronze_prefix)
         return 0
 
-    seen: set[tuple[str, int]] = set()
+    seen: set[tuple[str, int, str]] = set()
     total = 0
     total_skipped = 0
 
@@ -97,10 +95,12 @@ def run_silver_job(
                     id=str(rec.get("id", "")),
                     text=cleaned,
                     label=label_raw,
+                    split=rec.get("split", "unknown"),
+                    request_id=rec.get("request_id"),
                 )
                 silver_list.append(silver)
             except (json.JSONDecodeError, KeyError, ValueError) as e:
-                print(f"Skipping invalid record in {key}: {e}")
+                log_event("silver_invalid_record", level="warning", key=key, error=str(e))
                 continue
 
         if dedup:
@@ -116,17 +116,15 @@ def run_silver_job(
         data = ("\n".join(silver_records) + "\n").encode("utf-8")
         upload_bytes(out_key, data)
         total += len(silver_list)
-        print(f"Wrote {len(silver_list)} records to s3://{config.S3_DATA_BUCKET}/{out_key}")
+        log_event("silver_batch_written", key=out_key, records=len(silver_list))
 
     if dedup and total_skipped > 0:
-        print(f"Deduplication: skipped {total_skipped} duplicate(s)")
+        log_event("silver_dedup_summary", skipped=total_skipped)
     return total
 
 
-def parse_args(argv: Optional[list[str]] = None) -> argparse.Namespace:
-    parser = argparse.ArgumentParser(
-        description="Transform bronze IMDb reviews to silver (cleaned) layer."
-    )
+def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
+    parser = argparse.ArgumentParser(description="Transform bronze IMDb reviews to silver (cleaned) layer.")
     parser.add_argument(
         "--bronze-prefix",
         type=str,
@@ -147,14 +145,14 @@ def parse_args(argv: Optional[list[str]] = None) -> argparse.Namespace:
     return parser.parse_args(argv)
 
 
-def main(argv: Optional[list[str]] = None) -> None:
+def main(argv: list[str] | None = None) -> None:
     args = parse_args(argv)
     total = run_silver_job(
         bronze_prefix=args.bronze_prefix,
         silver_prefix=args.silver_prefix,
         dedup=not args.no_dedup,
     )
-    print(f"Silver job complete. Wrote {total} records.")
+    log_event("silver_job_complete", total_records=total)
 
 
 if __name__ == "__main__":

@@ -1,14 +1,12 @@
+# Same as requirements.txt but omit torch (provided by base image with CUDA).
 # Core streaming and data dependencies
 kafka-python
 datasets
 boto3
 pytest
-pytest-cov
-ruff
 
 # Embedding (BERT) and gold layer
 transformers
-torch
 pyarrow
 
 # Iceberg (gold layer)
@@ -31,5 +29,5 @@ joblib
 requests
 kfp
 
-# Monitoring (optional; metrics exposed at /metrics when available)
+# Monitoring (/metrics on predict service)
 prometheus_client

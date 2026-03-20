@@ -12,18 +12,17 @@ services:
     volumes:
       - kafka_data:/bitnami
     environment:
-          - KAFKA_NODE_ID=0
-          - KAFKA_PROCESS_ROLES=broker,controller
-          - KAFKA_LISTENERS=PLAINTEXT://:9092,CONTROLLER://:9093
-          - KAFKA_ADVERTISED_LISTENERS=PLAINTEXT://kafka:9092
-          - KAFKA_ADVERTISED_LISTENERS=PLAINTEXT://localhost:9092
-          - KAFKA_LISTENER_SECURITY_PROTOCOL_MAP=CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT
-          - KAFKA_CONTROLLER_LISTENER_NAMES=CONTROLLER
-          - KAFKA_INTER_BROKER_LISTENER_NAME=PLAINTEXT
-          - KAFKA_CONTROLLER_QUORUM_VOTERS=0@kafka:9093
-          - KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR=1
-          - KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR=1
-          - KAFKA_TRANSACTION_STATE_LOG_MIN_ISR=1
+      - KAFKA_NODE_ID=0
+      - KAFKA_PROCESS_ROLES=broker,controller
+      - KAFKA_LISTENERS=PLAINTEXT://:9092,CONTROLLER://:9093
+      - KAFKA_ADVERTISED_LISTENERS=PLAINTEXT://kafka:9092
+      - KAFKA_LISTENER_SECURITY_PROTOCOL_MAP=CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT
+      - KAFKA_CONTROLLER_LISTENER_NAMES=CONTROLLER
+      - KAFKA_INTER_BROKER_LISTENER_NAME=PLAINTEXT
+      - KAFKA_CONTROLLER_QUORUM_VOTERS=0@kafka:9093
+      - KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR=1
+      - KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR=1
+      - KAFKA_TRANSACTION_STATE_LOG_MIN_ISR=1
 
   minio:
     image: minio/minio
@@ -53,6 +52,22 @@ services:
       - ./jobs:/opt/jobs
     ports:
       - "4040:4040"
+
+  # Optional: local OpenAI-compatible LLM server (for synthetic review generation).
+  # Requires GPU for realistic models; adjust image/model/command as needed.
+  vllm:
+    image: vllm/vllm-openai:latest
+    networks:
+      - app-tier
+    ports:
+      - "8001:8001"
+    command:
+      - "--model"
+      - "gpt2"
+      - "--host"
+      - "0.0.0.0"
+      - "--port"
+      - "8001"
 
 networks:
   app-tier:

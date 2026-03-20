@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import re
-from typing import Optional
 
 
 def strip_html(text: str) -> str:
@@ -53,4 +52,4 @@ def clean_text(
     return s.strip()
 
 
-__all__ = ["clean_text", "strip_html", "normalize_whitespace"]
+__all__ = ["clean_text", "normalize_whitespace", "strip_html"]

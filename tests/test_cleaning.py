@@ -1,7 +1,5 @@
 """Tests for cleaning module."""
 
-import pytest
-
 from src.transformation.cleaning import clean_text, normalize_whitespace, strip_html
 
 
