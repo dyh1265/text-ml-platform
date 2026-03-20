@@ -5,34 +5,35 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
 [![Code style: ruff](https://img.shields.io/badge/code%20style-ruff-000000.svg)](https://docs.astral.sh/ruff/)
 
-A production-style **text ML platform** for ingestion, transformation, feature engineering, and training. Demonstrates a full end-to-end pipeline: streaming text data into Kafka, landing it in a bronze/silver/gold medallion architecture, training a sentiment classifier, and serving predictions via sync and async inference paths.
+A **production-style ML platform** for end-to-end text pipelines: Kafka ingestion → medallion (bronze/silver/gold) → BERT fine-tuning → embeddings → classifier training → sync and async inference. Built with industry patterns: ACID tables, streaming, observability.
 
 ---
 
-## Why This Matters
+## Highlights for Recruiters
 
-**Importance:** Modern ML systems need more than a one-off notebook. They require:
+| Area | What this project demonstrates |
+|------|--------------------------------|
+| **Data engineering** | Medallion architecture, Kafka streaming, object storage (MinIO/S3), Apache Iceberg for ACID and time travel |
+| **ML engineering** | BERT fine-tuning on domain data, embedding pipelines, train/eval split handling, model versioning |
+| **Production patterns** | Dual inference paths (sync HTTP + async Kafka worker), Prometheus metrics, Docker Compose dev/prod parity |
+| **Code quality** | Ruff linting, pytest with coverage, GitHub Actions CI, Makefile for reproducible commands |
+| **Extensibility** | Hugging Face datasets, optional Ollama LLM integration, Kubeflow pipeline definitions |
 
-- **Reproducible pipelines** – Data flows through defined stages (bronze → silver → gold) with clear lineage
-- **Scalable ingestion** – Kafka decouples producers and consumers, enabling batch and real-time streaming
-- **ACID storage** – Apache Iceberg provides time travel, schema evolution, and safe concurrent writes
-- **Operational flexibility** – Sync (HTTP) and async (Kafka → worker) inference modes for different latency and throughput needs
+---
 
-**Potential usage:**
+## Tech Stack
 
-| Use case | How this platform fits |
-|----------|------------------------|
-| **Sentiment / text classification** | Ready-to-use IMDb demo; swap in your own dataset and labels |
-| **MLOps / production ML** | Kubeflow pipeline definitions, Docker Compose for local dev, Iceberg for feature store |
-| **Data engineering learning** | Medallion architecture, Kafka, MinIO/S3, Iceberg patterns in one place |
-| **Embedding + classifier stack** | BERT embeddings → gold layer → logistic regression; extensible to other encoders |
-| **Async inference at scale** | Kafka consumer worker pattern for high-throughput, fire-and-forget predictions |
+| Layer | Technologies |
+|-------|--------------|
+| **Ingestion** | Kafka, Hugging Face Datasets, Ollama (optional) |
+| **Storage** | MinIO (S3-compatible), Apache Iceberg, PySpark |
+| **ML** | PyTorch, Transformers (BERT), scikit-learn, sentence-transformers |
+| **Serving** | FastAPI, Streamlit, Kafka consumer worker |
+| **Ops** | Docker, Prometheus metrics, structured logging |
 
 ---
 
 ## Architecture
-
-Data flows from source to prediction through these stages:
 
 ```mermaid
 flowchart TB
@@ -59,7 +60,8 @@ flowchart TB
     end
 
     subgraph Models
-        CLF[Classifier model]
+        FINETUNE[Finetune BERT]
+        CLF[Classifier]
     end
 
     subgraph Inference
@@ -75,7 +77,8 @@ flowchart TB
     BC --> BRONZE
     BRONZE --> SILVER_JOB[Silver Job]
     SILVER_JOB --> SILVER
-    SILVER --> EMB[Embedding Job]
+    SILVER --> FINETUNE
+    FINETUNE --> EMB[Embedding Job]
     EMB --> GT
     EMB --> GTest
     GT --> TRAIN[Train Classifier]
@@ -96,225 +99,126 @@ flowchart TB
     UI --> PRED
 ```
 
-**High-level flow:**
+**Data flow:**
 
-1. **Ingestion:** Producer streams IMDb reviews (or Ollama-generated text) into Kafka.
-2. **Bronze:** Consumer writes raw JSONL to MinIO under `bronze/imdb/<split>/`.
-3. **Silver:** Silver job cleans text, deduplicates, writes to `silver/imdb/<split>/`.
-4. **Gold:** Embedding job encodes with BERT, writes to Iceberg tables `imdb.gold_train`, `imdb.gold_test`, and (async) `imdb.gold_inference`.
-5. **Training:** Classifier trains on `gold_train`, evaluates on `gold_test`, saves to `models/sentiment_logreg.joblib`.
-6. **Inference:**
+1. **Ingestion** – Producer streams IMDb reviews (or Ollama-generated text) into Kafka.
+2. **Bronze** – Consumer writes raw JSONL to MinIO under `bronze/imdb/<split>/`.
+3. **Silver** – Silver job cleans text, deduplicates, writes to `silver/imdb/<split>/`.
+4. **Fine-tuning** – BERT is fine-tuned on IMDb silver data; output saved to `models/bert_sentiment_imdb`.
+5. **Gold** – Embedding job encodes with the fine-tuned BERT, writes to Iceberg tables `gold_train`, `gold_test`, `gold_inference`.
+6. **Training** – Classifier trains on `gold_train`, evaluates on `gold_test`, saves to `models/sentiment_logreg.joblib`.
+7. **Inference:**
    - **Sync:** UI → Predict API → BERT + classifier → HTTP response
    - **Async:** UI → Kafka → Inference worker → bronze/silver/gold + `imdb.predictions` → UI polls Iceberg
 
 ---
 
-## Structure
-
-- **docker/** – Docker Compose (Kafka, MinIO, Spark, demo services)
-- **src/** – Application code (config, ingestion, transformation, features, training, inference, utils)
-- **pipelines/** – Kubeflow pipeline definitions
-- **tests/** – Unit and integration tests
-- **scripts/** – `run_demo*.ps1` / `run_demo*.sh`, `prepopulate_imdb.ps1`
-
----
-
-## Quick Start (Docker, all-in-one)
+## Quick Start (Docker)
 
 From the project root:
 
 ```bash
-# 1. Start infra + demo services
-docker compose -f docker/docker-compose.yml -f docker/docker-compose.demo.gpu.yml up -d --build
+# 1. Start infrastructure + demo services (GPU)
+make docker-up
+# CPU: make docker-up-cpu
 
-# 2. Prepopulate data and train (one-shot)
-docker compose -f docker/docker-compose.yml -f docker/docker-compose.demo.gpu.yml run --rm prepopulate_imdb
+# 2. Prepopulate data, fine-tune BERT, train classifier (one-shot)
+make prepopulate
+# CPU: make prepopulate-cpu
 
-# 3. Verify Iceberg table
+# 3. Verify Iceberg tables (optional)
 docker compose -f docker/docker-compose.yml -f docker/docker-compose.demo.gpu.yml run --rm gold_iceberg_test
 
-# 4. Open UI
+# 4. Open the UI
 # Streamlit: http://localhost:8501
 # Predict API: http://localhost:8000
 # Prometheus metrics: http://localhost:8000/metrics
 ```
 
-**CPU-only:** Replace `docker/docker-compose.demo.gpu.yml` with `docker/docker-compose.demo.yml` and run the same 4 steps (up → prepopulate → gold_iceberg_test → UI).
-If you prefer the Makefile shortcuts: `make docker-up-cpu`, `make prepopulate-cpu`, `make docker-rebuild-cpu`.
+**Or use scripts:** `./scripts/run_demo_gpu.ps1` (Windows) / `./scripts/run_demo_gpu.sh` (Bash) to start services, then run prepopulate separately.
 
-### Restart everything
-
-```bash
-# Stop all services
-docker compose -f docker/docker-compose.yml -f docker/docker-compose.demo.gpu.yml down
-
-# Start again (rebuild if you changed code)
-docker compose -f docker/docker-compose.yml -f docker/docker-compose.demo.gpu.yml up -d --build
-
-# Re-prepopulate if needed (e.g. after clearing data)
-docker compose -f docker/docker-compose.yml -f docker/docker-compose.demo.gpu.yml run --rm prepopulate_imdb
-```
-
-**CPU-only (equivalent commands):** replace `docker-compose.demo.gpu.yml` with `docker-compose.demo.yml` (and optionally use the Makefile targets `make docker-up-cpu`, `make prepopulate-cpu`, `make docker-rebuild-cpu`).
+**GPU:** Requires [NVIDIA Container Toolkit](https://docs.nvidia.com/datacenter/cloud-native/container-toolkit/install.html). Use `docker-compose.demo.gpu.yml` (default in Makefile) or `docker-compose.demo.yml` for CPU.
 
 ---
 
-## Setup (local development)
+## Project Structure
+
+| Directory | Contents |
+|-----------|----------|
+| `src/` | Application code: config, ingestion, transformation, features, training, inference, UI |
+| `docker/` | Docker Compose (Kafka, MinIO, Spark, demo services) |
+| `pipelines/` | Kubeflow pipeline definitions |
+| `scripts/` | `run_demo*.ps1` / `run_demo*.sh`, `prepopulate_imdb.ps1`, `check_prepopulated.py` |
+| `tests/` | Unit and integration tests |
+
+---
+
+## Development
+
+### Local setup
 
 ```bash
 pip install -r requirements.txt
 ```
 
----
-
-## Usage
-
-### Kafka + IMDb ingestion (manual pipeline)
-
-1. Start Kafka and MinIO:
-
-   ```bash
-   docker compose -f docker/docker-compose.yml up -d
-   ```
-
-2. Stream IMDb reviews into Kafka:
-
-   ```bash
-   python -m src.ingestion.producer --mode batch --limit 100 --split train
-   python -m src.ingestion.producer --mode batch --limit 100 --split test
-   ```
-
-3. Run bronze consumer (writes to `bronze/imdb/`):
-
-   ```bash
-   python -m src.ingestion.bronze_consumer --batch-size 50
-   ```
-
-4. Run silver job (cleans, deduplicates, writes to `silver/imdb/`):
-
-   ```bash
-   python -m src.transformation.silver_job --bronze-prefix bronze/imdb/train/ --silver-prefix silver/imdb/train/
-   python -m src.transformation.silver_job --bronze-prefix bronze/imdb/test/  --silver-prefix silver/imdb/test/
-   ```
-
-5. Run embedding job (BERT → gold Parquet or Iceberg):
-
-   ```bash
-   # Parquet
-   python -m src.features.embedding_job
-
-   # Iceberg (ACID, time travel)
-   python -m src.features.embedding_job --iceberg --iceberg-namespace imdb --iceberg-table gold_train
-   python -m src.features.embedding_job --iceberg --iceberg-namespace imdb --iceberg-table gold_test
-   ```
-
-6. Train classifier:
-
-   ```bash
-   python -m src.training.train_classifier \
-     --iceberg-identifier imdb.gold_train \
-     --test-iceberg-identifier imdb.gold_test \
-     --model-out models/sentiment_logreg.joblib
-   ```
-
-### Run all demo services (Docker)
-
-After you have run the pipeline at least once so `models/sentiment_logreg.joblib` and Iceberg tables exist:
+### Run tests
 
 ```bash
-# PowerShell (Windows)
-./scripts/run_demo_gpu.ps1
-
-# Bash
-./scripts/run_demo.sh
+make test          # Unit tests (excludes Iceberg integration)
+make test-cov      # With coverage report
+make test-all      # All tests including integration
+make lint          # Ruff check
+make format        # Ruff format
 ```
 
-Or with Docker Compose:
+### Manual pipeline (no Docker)
 
-```bash
-docker compose -f docker/docker-compose.yml -f docker/docker-compose.demo.yml up -d --build
-```
-
-This is the **CPU** version.
-
-- **Streamlit UI:** http://localhost:8501  
-- **Predict API:** http://localhost:8000  
-- **Prometheus metrics:** http://localhost:8000/metrics (when `prometheus_client` is installed)
-
-**GPU (NVIDIA):** Use the GPU compose for faster BERT inference. Requires [NVIDIA Container Toolkit](https://docs.nvidia.com/datacenter/cloud-native/container-toolkit/install.html).
-
-```bash
-./scripts/run_demo_gpu.ps1   # Windows
-docker compose -f docker/docker-compose.yml -f docker/docker-compose.demo.gpu.yml up -d --build
-```
-
----
-
-## Tests
-
-Run unit tests from the project root (no PYTHONPATH needed; `conftest.py` adds it):
-
-```bash
-pytest tests/ -v
-```
-
-Skip the integration test (requires MinIO + Iceberg):
-
-```bash
-pytest tests/ -v --ignore=tests/test_gold_iceberg_table.py
-```
-
-Run the Iceberg integration test in Docker (after prepopulate):
-
-```bash
-docker compose -f docker/docker-compose.yml -f docker/docker-compose.demo.gpu.yml run --rm gold_iceberg_test
-```
+1. Start Kafka + MinIO: `docker compose -f docker/docker-compose.yml up -d`
+2. Producer: `python -m src.ingestion.producer --mode batch --limit 100 --split train`
+3. Bronze consumer: `python -m src.ingestion.bronze_consumer --batch-size 50 --limit 200`
+4. Silver job: `python -m src.transformation.silver_job --bronze-prefix bronze/imdb/train/ --silver-prefix silver/imdb/train/`
+5. Fine-tune BERT: `python -m src.training.finetune_bert --silver-train-prefix silver/imdb/train/ --silver-test-prefix silver/imdb/test/ --output-dir models/bert_sentiment_imdb`
+6. Embedding job: `python -m src.features.embedding_job --silver-prefix silver/imdb/train/ --iceberg --iceberg-namespace imdb --iceberg-table gold_train --bert-path models/bert_sentiment_imdb`
+7. Train classifier: `python -m src.training.train_classifier --iceberg-identifier imdb.gold_train --test-iceberg-identifier imdb.gold_test --model-out models/sentiment_logreg.joblib`
 
 ---
 
 ## Configuration
 
-All runtime config lives in `src/config.py` and is overridden by environment variables. Key vars:
+Key environment variables (see `src/config.py`):
 
 | Variable | Default | Description |
 |----------|---------|-------------|
 | `KAFKA_BOOTSTRAP_SERVERS` | `localhost:9092` | Kafka brokers |
-| `KAFKA_INFERENCE_TOPIC` | `imdb-inference` | Topic for UI → `inference_worker` (separate from bulk `imdb-reviews` so prepopulate traffic does not delay async predictions) |
+| `KAFKA_INFERENCE_TOPIC` | `imdb-inference` | Topic for async UI → inference worker |
 | `S3_ENDPOINT_URL` | `http://localhost:9000` | MinIO endpoint |
 | `S3_ACCESS_KEY` / `S3_SECRET_KEY` | `admin` / `password123` | MinIO credentials |
 | `ICEBERG_CATALOG_DB` | `.../iceberg_catalog/catalog.db` | SQLite catalog path |
-| `PREDICT_API_URL` | `http://localhost:8000/predict` | Predict API (for UI) |
-| `GOLD_ICEBERG_IDENTIFIER` | `imdb.gold_train` | Gold table for PCA viz |
-| `ASYNC_PREDICTION_TIMEOUT_S` | `180` | Max seconds UI waits for async worker to write prediction |
-
-Docker Compose sets these for containers; override in `docker-compose.*.yml` or `.env` as needed.
 
 ---
 
 ## Monitoring
 
-With `prometheus_client` installed, the Predict API exposes Prometheus metrics at `/metrics`:
+The Predict API exposes Prometheus metrics at `/metrics` when `prometheus_client` is installed:
 
-- `predict_requests_total` – Total requests by split
-- `predict_latency_seconds` – Request latency histogram
-- `predict_label_total` – Predictions by label (0/1)
-- `inference_consumed_total` / `inference_success_total` / `inference_failure_total` – Worker stats
-- `inference_processing_seconds` – Worker processing time
-
-Scrape with Prometheus or curl: `curl http://localhost:8000/metrics`
+- `predict_requests_total`, `predict_latency_seconds`, `predict_label_total`
+- `inference_consumed_total`, `inference_success_total`, `inference_failure_total`
+- `inference_processing_seconds`
 
 ---
 
-## Async vs sync inference (latency)
+## Async vs Sync Inference
 
-- **Sync:** UI → Predict API → one BERT forward pass + classifier → response. Fastest for interactive use.
-- **Async:** UI → Kafka → worker runs the full path (bronze + silver + BERT + Iceberg gold + predictions table) → UI polls Iceberg. Expect several seconds even when healthy: the worker does more I/O and writes than sync mode.
+| Mode | Path | Use case |
+|------|------|----------|
+| **Sync** | UI → Predict API → BERT + classifier → HTTP | Interactive, low latency |
+| **Async** | UI → Kafka → worker (bronze/silver/gold + predictions) → UI polls Iceberg | High throughput, fire-and-forget |
 
-Async requests use a **dedicated** Kafka topic (`imdb-inference` / `KAFKA_INFERENCE_TOPIC`) so they are not queued behind thousands of train/test messages on `imdb-reviews` from prepopulate.
+Async uses a dedicated topic (`imdb-inference`) so it is not blocked by bulk train/test traffic on `imdb-reviews`.
 
 ---
 
-## Tutorials
+## Tutorials (Jupyter)
 
 | Notebook | Description |
 |----------|-------------|
@@ -322,17 +226,17 @@ Async requests use a **dedicated** Kafka topic (`imdb-inference` / `KAFKA_INFERE
 | `stream_to_bronze_tutorial.ipynb` | Producer → Kafka → Bronze consumer |
 | `silver_layer_tutorial.ipynb` | Bronze → Silver (cleaning, dedup) |
 | `gold_layer_tutorial.ipynb` | Silver → BERT embeddings → Parquet |
-| `iceberg_gold_tutorial.ipynb` | Why Iceberg, schema evolution, time travel |
+| `iceberg_gold_tutorial.ipynb` | Iceberg schema evolution, time travel |
 | `production_demo_tutorial.ipynb` | Full flow: Kafka → Bronze/Silver/Gold → Training → UI |
 
 ---
 
 ## License
 
-MIT -- see [LICENSE](LICENSE).
+MIT – see [LICENSE](LICENSE).
 
 ---
 
 ## Clean Python Project Guide
 
-See [RECOMMENDATIONS.md](RECOMMENDATIONS.md) for a guide on writing Python projects that recruiters and hiring managers appreciate (structure, tooling, code quality, testing, CI/CD).
+See [RECOMMENDATIONS.md](RECOMMENDATIONS.md) for practices that make Python projects recruiter-friendly: structure, tooling, testing, CI/CD.
