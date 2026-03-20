@@ -19,8 +19,11 @@ def _mock_deps():
 
     fake_enc = [torch.zeros(1, 768)]
 
+    def fake_load_classifier(_model_path):
+        return fake_model, {}
+
     with (
-        patch("src.inference.predict_service.joblib.load", return_value={"model": fake_model, "metrics": {}}),
+        patch("src.inference.predict_service._load_classifier", side_effect=fake_load_classifier),
         patch("src.inference.predict_service.AutoModel") as mock_auto,
         patch("src.inference.predict_service.AutoTokenizer") as mock_tok,
         patch("src.inference.predict_service.encode_batch", return_value=fake_enc),
