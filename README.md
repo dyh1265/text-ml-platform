@@ -1,6 +1,6 @@
 # text-ml-platform
 
-[![CI](https://github.com/dyh/text-ml-platform/actions/workflows/ci.yml/badge.svg)](https://github.com/dyh/text-ml-platform/actions/workflows/ci.yml)
+[![CI](https://github.com/dyh1265/text-ml-platform/actions/workflows/ci.yml/badge.svg)](https://github.com/dyh1265/text-ml-platform/actions/workflows/ci.yml)
 [![Python 3.10+](https://img.shields.io/badge/python-3.10%2B-blue.svg)](https://www.python.org/downloads/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
 [![Code style: ruff](https://img.shields.io/badge/code%20style-ruff-000000.svg)](https://docs.astral.sh/ruff/)
@@ -26,7 +26,7 @@ A **production-style ML platform** for end-to-end text pipelines: Kafka ingestio
 | Layer | Technologies |
 |-------|--------------|
 | **Ingestion** | Kafka, Hugging Face Datasets, Ollama (optional) |
-| **Storage** | MinIO (S3-compatible), Apache Iceberg, PySpark |
+| **Storage** | MinIO (S3-compatible), [Apache Iceberg](https://iceberg.apache.org/) (ACID tables on Parquet), Spark image for catalog compatibility |
 | **ML** | PyTorch, Transformers (BERT), scikit-learn, sentence-transformers |
 | **Serving** | FastAPI, Streamlit, Kafka consumer worker |
 | **Ops** | Docker, Prometheus metrics, structured logging |
@@ -148,6 +148,7 @@ docker compose -f docker/docker-compose.yml -f docker/docker-compose.demo.gpu.ym
 | `src/` | Application code: config, ingestion, transformation, features, training, inference, UI |
 | `docker/` | Docker Compose (Kafka, MinIO, Spark, demo services) |
 | `pipelines/` | Kubeflow pipeline definitions |
+| `docs/` | Azure deployment sketch, guides |
 | `scripts/` | `run_demo*.ps1` / `run_demo*.sh`, `prepopulate_imdb.ps1`, `check_prepopulated.py` |
 | `tests/` | Unit and integration tests |
 
@@ -234,6 +235,15 @@ Async uses a dedicated topic (`imdb-inference`) so it is not blocked by bulk tra
 ## License
 
 MIT – see [LICENSE](LICENSE).
+
+---
+
+## Concepts (quick)
+
+| Term | Meaning |
+|------|---------|
+| **Apache Spark** | Distributed compute engine; here used alongside Iceberg for table metadata / catalog workflows. |
+| **Apache Iceberg** | Open table format on object storage: ACID writes, time travel, schema evolution over Parquet files. |
 
 ---
 
