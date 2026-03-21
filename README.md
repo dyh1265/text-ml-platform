@@ -9,7 +9,7 @@ A **production-style ML platform** for end-to-end text pipelines: Kafka ingestio
 
 ---
 
-## Highlights for Recruiters
+## Highlights
 
 | Area | What this project demonstrates |
 |------|--------------------------------|
@@ -252,4 +252,4 @@ MIT – see [LICENSE](LICENSE).
 
 ## Clean Python Project Guide
 
-See [RECOMMENDATIONS.md](RECOMMENDATIONS.md) for practices that make Python projects recruiter-friendly: structure, tooling, testing, CI/CD.
+See [RECOMMENDATIONS.md](RECOMMENDATIONS.md) for practices that make Python projects maintainable and professional: structure, tooling, testing, CI/CD.

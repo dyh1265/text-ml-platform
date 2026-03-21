@@ -1,6 +1,6 @@
-# How to Write Clean Python Projects Recruiters Love
+# How to Write Clean Python Projects
 
-A practical guide to structuring Python projects so they look professional, maintainable, and impressive to technical recruiters and hiring managers.
+A practical guide to structuring Python projects so they look professional, maintainable, and impressive to developers and teams.
 
 ---
 
@@ -26,7 +26,7 @@ project-root/
 └── README.md
 ```
 
-**Why recruiters care:** A clear layout shows you think about organization. `src/` as top-level avoids import issues and supports editable installs.
+**Why it matters:** A clear layout shows you think about organization. `src/` as top-level avoids import issues and supports editable installs.
 
 ---
 
@@ -86,7 +86,7 @@ Centralize in src/config.py. Read from env vars. Never hardcode secrets.
 
 ---
 
-## 10. What Recruiters Notice
+## 10. Quality Indicators
 
 | Good sign | Red flag |
 |-----------|----------|
