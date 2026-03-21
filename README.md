@@ -9,7 +9,7 @@ A **production-style ML platform** for end-to-end text pipelines: Kafka ingestio
 
 ### Demo
 
-[📹 **Watch demo video**](assets/demo.mp4)
+[![Watch demo on YouTube](https://img.youtube.com/vi/BqRECTsd2NU/hqdefault.jpg)](https://youtu.be/BqRECTsd2NU)
 
 ---
 
