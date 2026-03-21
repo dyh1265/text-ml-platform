@@ -82,12 +82,12 @@ services:
         python -m src.inference.predict_service
         --finetuned-bert-path models/bert_sentiment_imdb
         --model-path models/sentiment_logreg.joblib
-        --port 8000
+        --port 8002
         --iceberg-write
     networks:
       - app-tier
     ports:
-      - "8000:8000"
+      - "8002:8002"
     environment:
       KAFKA_BOOTSTRAP_SERVERS: kafka:9092
       S3_ENDPOINT_URL: http://minio:9000
@@ -152,7 +152,7 @@ services:
       S3_SECRET_KEY: password123
       S3_DATA_BUCKET: text-ml-data
       # Streamlit (server) calls predict API inside the Docker network.
-      PREDICT_API_URL: http://predict_service:8000/predict
+      PREDICT_API_URL: http://predict_service:8002/predict
       GOLD_ICEBERG_IDENTIFIER: imdb.gold_train
       # Inside container, localhost points to itself; use host gateway for local Ollama.
       OLLAMA_API_BASE: http://host.docker.internal:11434/v1

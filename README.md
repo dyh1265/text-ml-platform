@@ -7,6 +7,10 @@
 
 A **production-style ML platform** for end-to-end text pipelines: Kafka ingestion → medallion (bronze/silver/gold) → BERT fine-tuning → embeddings → classifier training → sync and async inference. Built with industry patterns: ACID tables, streaming, observability.
 
+### Demo
+
+[📹 **Watch demo video**](assets/demo.mp4)
+
 ---
 
 ## Highlights
