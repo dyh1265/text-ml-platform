@@ -81,7 +81,7 @@ def _fit_reducer(X: np.ndarray, method: str, random_state: int = 42):
         coords = reducer.fit_transform(X)
         return reducer, coords
     if method == "UMAP":
-        import umap
+        import umap  # type: ignore[import-untyped]
 
         reducer = umap.UMAP(n_components=2, random_state=random_state)
         coords = reducer.fit_transform(X)

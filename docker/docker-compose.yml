@@ -53,22 +53,6 @@ services:
     ports:
       - "4040:4040"
 
-  # Optional: local OpenAI-compatible LLM server (for synthetic review generation).
-  # Requires GPU for realistic models; adjust image/model/command as needed.
-  vllm:
-    image: vllm/vllm-openai:latest
-    networks:
-      - app-tier
-    ports:
-      - "8001:8001"
-    command:
-      - "--model"
-      - "gpt2"
-      - "--host"
-      - "0.0.0.0"
-      - "--port"
-      - "8001"
-
 networks:
   app-tier:
     driver: bridge

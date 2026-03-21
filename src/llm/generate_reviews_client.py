@@ -1,6 +1,6 @@
-"""Client for generating synthetic IMDb-style reviews with a local LLM (vLLM/Ollama).
+"""Client for generating synthetic IMDb-style reviews with local Ollama.
 
-This client calls an OpenAI-compatible endpoint and publishes generated
+This client calls Ollama's OpenAI-compatible endpoint and publishes generated
 reviews to Kafka using the same message schema as the ingestion layer.
 """
 
@@ -101,14 +101,14 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument(
         "--api-base",
         type=str,
-        default="http://localhost:8001",
-        help="OpenAI-compatible API base (e.g. http://localhost:8001 for vLLM, http://localhost:11434/v1 for Ollama).",
+        default="http://localhost:11434/v1",
+        help="Ollama API base (default: http://localhost:11434/v1).",
     )
     parser.add_argument(
         "--model",
         type=str,
-        default="gpt2",
-        help="LLM model name (e.g. gpt2 for vLLM, llama3.2 or mistral for Ollama).",
+        default="llama3.2",
+        help="Ollama model name (e.g. llama3.2, mistral).",
     )
     parser.add_argument("--max-tokens", type=int, default=350)
     return parser.parse_args(argv)

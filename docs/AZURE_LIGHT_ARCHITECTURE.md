@@ -1,6 +1,6 @@
 # Azure Light Architecture
 
-A simplified deployment of the text-ml-platform that fits within **Azure free tier** or the **$200 trial credit**. Trade-offs: fewer components, smaller scale, no vLLM.
+A simplified deployment of the text-ml-platform that fits within **Azure free tier** or the **$200 trial credit**. Trade-offs: fewer components, smaller scale, no Ollama.
 
 ---
 
@@ -44,7 +44,7 @@ A simplified deployment of the text-ml-platform that fits within **Azure free ti
 | Kafka              | **Event Hubs** (Kafka API)      | Free tier: 1 namespace, 1 TU, ~1M msgs/mo  |
 | MinIO / S3         | **Blob Storage**                | Free: 5GB LRS, 10K reads, 1K writes/mo     |
 | Spark + Iceberg    | **Blob + Parquet**              | Drop Iceberg; use Parquet files in Blob    |
-| vLLM / Ollama      | **None**                        | Use IMDb producer only (no synthetic LLM)  |
+| Ollama             | **None**                        | Use IMDb producer only (no synthetic LLM)  |
 | Docker Compose     | **Container Apps** or **AKS**   | Free: ~180K vCPU-s, 360K GiB-s/mo          |
 
 ---
@@ -82,7 +82,7 @@ With the trial credit you can run a **fuller** setup:
 2. **Blob Storage** – Use `azure-storage-blob`; adapt `src/utils/s3_client.py` to a Blob backend or use `s3fs` with Azurite / Blob Hierarchical Namespace.
 3. **Drop Iceberg** – Write gold Parquet to Blob; skip Spark/Iceberg catalog.
 4. **Config** – Add `AZURE_EVENTHUB_CONNECTION`, `AZURE_STORAGE_CONNECTION`, etc. in `src/config.py`.
-5. **Producer** – Keep IMDb HuggingFace producer; remove or gate Ollama/vLLM path.
+5. **Producer** – Keep IMDb HuggingFace producer; remove or gate Ollama path.
 
 ---
 
@@ -132,7 +132,7 @@ az containerapp create --name ca-predict --resource-group rg-text-ml-light \
 
 | Kept                          | Dropped                            |
 |-------------------------------|------------------------------------|
-| IMDb producer (HuggingFace)   | vLLM / Ollama synthetic generation |
+| IMDb producer (HuggingFace)   | Ollama synthetic generation |
 | Bronze → Silver → Gold flow   | Apache Iceberg (use Parquet only)  |
 | BERT fine-tuning              | Spark                              |
 | Embedding + classifier        | Real-time Kafka consumer (batch OK)|

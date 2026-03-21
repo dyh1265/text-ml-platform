@@ -27,8 +27,8 @@ from kfp import dsl
 @dsl.pipeline(name="text-ml-platform-imdb-demo")
 def imdb_demo_pipeline(
     image: str = "text-ml-platform:latest",
-    llm_api_base: str = "http://vllm:8001",
-    llm_model: str = "gpt2",
+    llm_api_base: str = "http://localhost:11434/v1",
+    llm_model: str = "llama3.2",
     generate_count: int = 50,
     bronze_batch_size: int = 100,
     embed_iceberg: bool = True,

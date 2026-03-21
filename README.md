@@ -200,6 +200,7 @@ Key environment variables (see `src/config.py`):
 | `S3_ENDPOINT_URL` | `http://localhost:9000` | MinIO endpoint |
 | `S3_ACCESS_KEY` / `S3_SECRET_KEY` | `admin` / `password123` | MinIO credentials |
 | `ICEBERG_CATALOG_DB` | `.../iceberg_catalog/catalog.db` | SQLite catalog path |
+| `OLLAMA_API_BASE` | `http://localhost:11434/v1` | Ollama API (for synthetic review generation) |
 
 ---
 
