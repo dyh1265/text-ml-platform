@@ -148,6 +148,7 @@ docker compose -f docker/docker-compose.yml -f docker/docker-compose.demo.gpu.ym
 | `src/` | Application code: config, ingestion, transformation, features, training, inference, UI |
 | `docker/` | Docker Compose (Kafka, MinIO, Spark, demo services) |
 | `pipelines/` | Kubeflow pipeline definitions |
+| `tutorials/` | Jupyter notebooks (Kafka, bronze, silver, gold, Iceberg, production demo) |
 | `docs/` | Azure deployment sketch, guides |
 | `scripts/` | `run_demo*.ps1` / `run_demo*.sh`, `prepopulate_imdb.ps1`, `check_prepopulated.py` |
 | `tests/` | Unit and integration tests |
@@ -221,14 +222,16 @@ Async uses a dedicated topic (`imdb-inference`) so it is not blocked by bulk tra
 
 ## Tutorials (Jupyter)
 
+Run notebooks from the project root so `src` imports work. Example: `jupyter notebook tutorials/kafka_tutorial.ipynb`
+
 | Notebook | Description |
 |----------|-------------|
-| `kafka_tutorial.ipynb` | Kafka basics and IMDb producer |
-| `stream_to_bronze_tutorial.ipynb` | Producer → Kafka → Bronze consumer |
-| `silver_layer_tutorial.ipynb` | Bronze → Silver (cleaning, dedup) |
-| `gold_layer_tutorial.ipynb` | Silver → BERT embeddings → Parquet |
-| `iceberg_gold_tutorial.ipynb` | Iceberg schema evolution, time travel |
-| `production_demo_tutorial.ipynb` | Full flow: Kafka → Bronze/Silver/Gold → Training → UI |
+| `tutorials/kafka_tutorial.ipynb` | Kafka basics and IMDb producer |
+| `tutorials/stream_to_bronze_tutorial.ipynb` | Producer → Kafka → Bronze consumer |
+| `tutorials/silver_layer_tutorial.ipynb` | Bronze → Silver (cleaning, dedup) |
+| `tutorials/gold_layer_tutorial.ipynb` | Silver → BERT embeddings → Parquet |
+| `tutorials/iceberg_gold_tutorial.ipynb` | Iceberg schema evolution, time travel |
+| `tutorials/production_demo_tutorial.ipynb` | Full flow: Kafka → Bronze/Silver/Gold → Training → UI |
 
 ---
 

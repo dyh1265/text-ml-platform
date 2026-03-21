@@ -8,6 +8,7 @@ venv/
 .venv/
 .idea/
 .vscode/
+.cursor/
 .mypy_cache/
 .pytest_cache/
 .ruff_cache/
@@ -19,17 +20,34 @@ venv/
 .DS_Store
 Thumbs.db
 
+# Local env (keep .env.example)
+.env
+.env.local
+.env.*.local
+
 # Local data and artifacts
 data/
 logs/
 models/
+.coverage
+.coverage.*
+htmlcov/
+coverage.xml
+gold_pca_for_tableau.csv
+embedding_test_out.txt
 
 # MinIO / Iceberg local state
 docker/minio-data/
-iceberg_catalog/catalog.db
+iceberg_catalog/
 
 # Python packaging
 dist/
 build/
 *.egg-info/
+
+# Editor backups
+*.swp
+*.swo
+*~
+*.bak
 
