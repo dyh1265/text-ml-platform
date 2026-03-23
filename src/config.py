@@ -90,7 +90,7 @@ IMDB_MAX_RECORDS: int | None = int(os.getenv("IMDB_MAX_RECORDS", "")) if os.gete
 # Demo / UI configuration
 # ---------------------------------------------------------------------------
 
-PREDICT_API_URL: str = os.getenv("PREDICT_API_URL", "http://localhost:8000/predict")
+PREDICT_API_URL: str = os.getenv("PREDICT_API_URL", "http://localhost:8002/predict")
 GOLD_ICEBERG_IDENTIFIER: str = os.getenv("GOLD_ICEBERG_IDENTIFIER", "imdb.gold_train")
 PCA_MAX_POINTS: int = int(os.getenv("PCA_MAX_POINTS", "1500"))
 OLLAMA_API_BASE: str = os.getenv("OLLAMA_API_BASE", "http://localhost:11434/v1")

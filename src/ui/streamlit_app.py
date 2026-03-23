@@ -228,7 +228,7 @@ if submitted:
                 if "refused" in err_str.lower() or "Connection" in err_str or "10061" in err_str:
                     st.info(
                         "Start the prediction service in a terminal (from project root): "
-                        "`python -m src.inference.predict_service --port 8000`"
+                        "`python -m src.inference.predict_service --port 8002`"
                     )
     else:
         kafka_ok = False

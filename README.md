@@ -119,29 +119,59 @@ flowchart TB
 
 ## Quick Start (Docker)
 
-From the project root:
+Run from project root.
+
+### 0) Ollama prerequisite (for synthetic review generation)
 
 ```bash
-# 1. Start infrastructure + demo services (GPU)
-make docker-up
-# CPU: make docker-up-cpu
-
-# 2. Prepopulate data, fine-tune BERT, train classifier (one-shot)
-make prepopulate
-# CPU: make prepopulate-cpu
-
-# 3. Verify Iceberg tables (optional)
-docker compose -f docker/docker-compose.yml -f docker/docker-compose.demo.gpu.yml run --rm gold_iceberg_test
-
-# 4. Open the UI
-# Streamlit: http://localhost:8501
-# Predict API: http://localhost:8000
-# Prometheus metrics: http://localhost:8000/metrics
+ollama serve
+ollama pull llama3.2
 ```
 
-**Or use scripts:** `./scripts/run_demo_gpu.ps1` (Windows) / `./scripts/run_demo_gpu.sh` (Bash) to start services, then run prepopulate separately.
+### 1) Start services
 
-**GPU:** Requires [NVIDIA Container Toolkit](https://docs.nvidia.com/datacenter/cloud-native/container-toolkit/install.html). Use `docker-compose.demo.gpu.yml` (default in Makefile) or `docker-compose.demo.yml` for CPU.
+```bash
+# GPU stack (default)
+make docker-up
+
+# CPU stack
+# make docker-up-cpu
+```
+
+### 2) Prepopulate train/test data and models
+
+```bash
+# GPU
+make prepopulate
+
+# CPU
+# make prepopulate-cpu
+```
+
+This one-shot step runs producer -> bronze -> silver -> BERT fine-tuning -> embeddings -> classifier training.
+
+### 3) (Optional) Verify Iceberg snapshot health
+
+```bash
+docker compose -f docker/docker-compose.yml -f docker/docker-compose.demo.gpu.yml run --rm gold_iceberg_test
+```
+
+### 4) Open endpoints
+
+- Streamlit UI: `http://localhost:8501`
+- Predict API: `http://localhost:8002`
+- Prometheus metrics: `http://localhost:8002/metrics`
+
+### 5) Stop services
+
+```bash
+make docker-down
+# or: make docker-down-cpu
+```
+
+Use the `Makefile` commands above as the single entrypoint for start/prepopulate/stop.
+
+**GPU note:** Requires [NVIDIA Container Toolkit](https://docs.nvidia.com/datacenter/cloud-native/container-toolkit/install.html). Use `docker-compose.demo.gpu.yml` for GPU and `docker-compose.demo.yml` for CPU.
 
 ---
 
@@ -154,7 +184,7 @@ docker compose -f docker/docker-compose.yml -f docker/docker-compose.demo.gpu.ym
 | `pipelines/` | Kubeflow pipeline definitions |
 | `tutorials/` | Jupyter notebooks (Kafka, bronze, silver, gold, Iceberg, production demo) |
 | `docs/` | Azure deployment sketch, guides |
-| `scripts/` | `run_demo*.ps1` / `run_demo*.sh`, `prepopulate_imdb.ps1`, `check_prepopulated.py` |
+| `scripts/` | Diagnostics only: `check_prepopulated.py`, `check_predictions.py` |
 | `tests/` | Unit and integration tests |
 
 ---

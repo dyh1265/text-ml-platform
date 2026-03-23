@@ -284,7 +284,7 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--device", type=str, default="cpu")
     parser.add_argument("--iceberg-write", action="store_true", help="Write predictions to Iceberg (imdb.predictions).")
     parser.add_argument("--host", type=str, default="0.0.0.0")
-    parser.add_argument("--port", type=int, default=8000)
+    parser.add_argument("--port", type=int, default=8002)
     return parser.parse_args(argv)
 
 
